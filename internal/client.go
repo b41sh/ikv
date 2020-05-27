@@ -15,6 +15,7 @@ func NewClient() *Client {
 	return &Client{}
 }
 
+// run client connect to server and get value
 func (c *Client) Run() {
 
 	port := "127.0.0.1:6379"

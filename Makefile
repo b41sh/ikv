@@ -5,20 +5,21 @@ BLDDIR = build
 BLDFLAGS=
 EXT=
 ifeq (${GOOS},windows)
-    EXT=.exe
+	EXT=.exe
 endif
 
-CMDS = server client
+CMDS = server client indexer
 all: $(CMDS)
 
-$(BLDDIR)/server:     $(wildcard cmd/server/*.go  internal/*.go)
-$(BLDDIR)/client:     $(wildcard cmd/client/*.go  internal/*.go)
+$(BLDDIR)/server:	$(wildcard cmd/server/*.go  internal/*.go)
+$(BLDDIR)/client:	$(wildcard cmd/client/*.go  internal/*.go)
+$(BLDDIR)/indexer:	$(wildcard cmd/indexer/*.go  internal/*.go)
 
 $(BLDDIR)/%:
 	@mkdir -p $(dir $@)
 	go build ${BLDFLAGS} -o $@ ./cmd/$*
 
-$(APPS): %: $(BLDDIR)/%
+$(CMDS): %: $(BLDDIR)/%
 
 clean:
 	rm -fr $(BLDDIR)

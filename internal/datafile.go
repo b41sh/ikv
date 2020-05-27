@@ -7,11 +7,11 @@ import (
 	"encoding/binary"
 )
 
-type Pos struct {
-	Offset    uint64
-	ValueSize uint64
-}
+const (
+	originalFilePath = "/tmp/org.data"
+)
 
+// read data from original file
 type DataReader struct {
 	reader *mmap.ReaderAt
 	l      int64
@@ -19,7 +19,7 @@ type DataReader struct {
 }
 
 func NewDataReader() (*DataReader, error) {
-	reader, err := mmap.Open("/tmp/org.data")
+	reader, err := mmap.Open(originalFilePath)
 	if err != nil {
 		return &DataReader{}, err
 	}
@@ -43,6 +43,16 @@ func (d *DataReader) ReadAt(size, offset uint64) ([]byte, error) {
 	return buf, nil
 }
 
+// stream read original file
+// once read a chunk into buf and then loop through
+//
+// file format is as follow
+//
+// +----------+--------+------------+--------+
+// | key_size |   key  | value_size |  value |
+// |  uint32  | []byte |   uint64   | []byte |
+// +----------+--------+------------+--------+
+//
 type DataStreamReader struct {
 	reader *mmap.ReaderAt
 	l      int64
@@ -53,10 +63,11 @@ type DataStreamReader struct {
 	ksbuf  []byte
 	vsbuf  []byte
 	kbuf   []byte
+	vbuf   []byte
 }
 
 func NewDataStreamReader() (*DataStreamReader, error) {
-	reader, err := mmap.Open("/tmp/org.data")
+	reader, err := mmap.Open(originalFilePath)
 	if err != nil {
 		return &DataStreamReader{}, err
 	}
@@ -68,6 +79,7 @@ func NewDataStreamReader() (*DataStreamReader, error) {
 	ksbuf := make([]byte, 4)
 	vsbuf := make([]byte, 8)
 	kbuf := make([]byte, 1024)
+	vbuf := make([]byte, 1024*1024)
 	cnt := 0
 
 	return &DataStreamReader{
@@ -80,9 +92,11 @@ func NewDataStreamReader() (*DataStreamReader, error) {
 		ksbuf:  ksbuf,
 		vsbuf:  vsbuf,
 		kbuf:   kbuf,
+		vbuf:   vbuf,
 	}, nil
 }
 
+// read key_size
 func (d *DataStreamReader) ReadKeySize() (uint32, error) {
 	start := 0
 	end := 4
@@ -108,6 +122,7 @@ func (d *DataStreamReader) ReadKeySize() (uint32, error) {
 	return keySize, nil
 }
 
+// read value_size
 func (d *DataStreamReader) ReadValueSize() (uint64, error) {
 	start := 0
 	end := 8
@@ -133,6 +148,7 @@ func (d *DataStreamReader) ReadValueSize() (uint64, error) {
 	return valueSize, nil
 }
 
+// read key
 func (d *DataStreamReader) ReadKey(keySize uint32) ([]byte, error) {
 	ks := int(keySize)
 	start := 0
@@ -159,6 +175,34 @@ func (d *DataStreamReader) ReadKey(keySize uint32) ([]byte, error) {
 	return rbuf, nil
 }
 
+// read value
+func (d *DataStreamReader) ReadValue(valueSize uint64) ([]byte, error) {
+	vs := int(valueSize)
+	start := 0
+	end := int(valueSize)
+	if d.roff+end > 1024*1024 {
+		voff := copy(d.vbuf, d.buf[d.roff:])
+		start += voff
+		end -= voff
+		d.roff += voff
+	}
+	if d.roff == 0 || d.roff == 1024*1024 {
+		n, err := d.read()
+		if n == 0 {
+			return nil, errors.New("EOF")
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	copy(d.vbuf[start:], d.buf[d.roff:d.roff+end])
+	d.roff += end
+
+	rbuf := d.vbuf[0:vs]
+	return rbuf, nil
+}
+
+// skip a value
 func (d *DataStreamReader) Skip(valueSize uint64) error {
 	vs := int(valueSize)
 	if d.roff+vs > 1024*1024 {
