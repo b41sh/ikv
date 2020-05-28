@@ -30,7 +30,7 @@
 - 内存占用的空间与数据量无关，增加key的数量不会明显增加内存使用量
 
 针对本题目内存相对总数据量较少的情况，采用Adaptive Radix Tree构建索引。
-树的key为数据文件中的key，value为pageId和offset。
+树的key为数据文件中的key，value为valPageId和valOffset组成的position结构。
 
 ## 代码结构
 
@@ -103,8 +103,8 @@ value使用valPageId和valOffset组成的position，这两个字段都是4byte�
 
 ## 参考资料
 
-[1] [The Adaptive Radix Tree: ARTful Indexing for Main-Memory Databases (Specification)](http://www-db.in.tum.de/~leis/papers/ART.pdf)
-[2] [A Comparative Study of Secondary Indexing Techniques in LSM-based NoSQL Databases](https://www.cs.ucr.edu/~vagelis/publications/LSM-secondary-indexing-sigmod2018.pdf)
-[3] [Bitcask A Log-Structured Hash Table for Fast Key/Value Data](https://riak.com/assets/bitcask-intro.pdf)
-[4] [Flavors of I/O](https://medium.com/databasss/on-disk-io-part-1-flavours-of-io-8e1ace1de017)
+- [1] [The Adaptive Radix Tree: ARTful Indexing for Main-Memory Databases (Specification)](http://www-db.in.tum.de/~leis/papers/ART.pdf)
+- [2] [A Comparative Study of Secondary Indexing Techniques in LSM-based NoSQL Databases](https://www.cs.ucr.edu/~vagelis/publications/LSM-secondary-indexing-sigmod2018.pdf)
+- [3] [Bitcask A Log-Structured Hash Table for Fast Key/Value Data](https://riak.com/assets/bitcask-intro.pdf)
+- [4] [Flavors of I/O](https://medium.com/databasss/on-disk-io-part-1-flavours-of-io-8e1ace1de017)
 
